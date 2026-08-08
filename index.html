@@ -38,39 +38,48 @@ button{
     color:white;
 }
 
-button:hover{
-    background:#c77dff;
+button:active{
+    transform:scale(.97);
 }
 
-h1{
-    margin:0;
+button.completed{
+    background:#555;
+    text-decoration:line-through;
+    opacity:.7;
+}
+
+.status{
+    font-size:24px;
+    font-weight:bold;
+}
+
+.message{
+    min-height:30px;
+    font-size:18px;
+    font-weight:bold;
 }
 
 </style>
-
 </head>
 
 <body>
 
 <header>
-
 <h1>⚔️ Rise Quest</h1>
-
 <p>みちゃの冒険</p>
-
 </header>
 
 <div class="card">
 
-<h2>Lv.1</h2>
+<h2>Lv.<span id="level">1</span></h2>
 
-<p>❤️❤️❤️❤️❤️</p>
+<p class="status" id="hp">❤️❤️❤️❤️❤️</p>
 
-<p>EXP 0 / 100</p>
+<p>EXP <span id="exp">0</span> / 100</p>
 
-<p>🪙 Gold 0</p>
+<p>🪙 Gold <span id="gold">0</span></p>
 
-<p>🔥 連続出勤 0日</p>
+<p>🔥 連続出勤 <span id="streak">0</span>日</p>
 
 </div>
 
@@ -78,13 +87,23 @@ h1{
 
 <h2>今日のクエスト</h2>
 
-<button>🌞 起きた</button>
+<button id="wake" onclick="completeQuest('wake')">
+🌞 起きた　＋10 EXP
+</button>
 
-<button>💼 出勤した</button>
+<button id="work" onclick="completeQuest('work')">
+💼 出勤した　＋30 EXP
+</button>
 
-<button>⏰ 遅刻したけど出勤</button>
+<button id="late" onclick="completeQuest('late')">
+⏰ 遅刻したけど出勤　＋20 EXP
+</button>
 
-<button>📵 スマホ我慢</button>
+<button id="phone" onclick="completeQuest('phone')">
+📵 スマホ我慢　＋15 EXP
+</button>
+
+<p class="message" id="message"></p>
 
 </div>
 
@@ -95,6 +114,129 @@ h1{
 <p>「遅刻でも出勤したら勝ち。」</p>
 
 </div>
+
+<script>
+
+const QUEST_EXP = {
+    wake: 10,
+    work: 30,
+    late: 20,
+    phone: 15
+};
+
+let data = JSON.parse(localStorage.getItem("riseQuestData")) || {
+    level: 1,
+    exp: 0,
+    gold: 0,
+    streak: 0,
+    lastAttendance: null,
+    quests: {},
+    questDate: ""
+};
+
+const today = new Date().toISOString().slice(0,10);
+
+if(data.questDate !== today){
+    data.quests = {};
+    data.questDate = today;
+    save();
+}
+
+function save(){
+    localStorage.setItem("riseQuestData", JSON.stringify(data));
+}
+
+function updateScreen(){
+
+    document.getElementById("level").textContent = data.level;
+    document.getElementById("exp").textContent = data.exp;
+    document.getElementById("gold").textContent = data.gold;
+    document.getElementById("streak").textContent = data.streak;
+
+    Object.keys(QUEST_EXP).forEach(function(quest){
+
+        const button = document.getElementById(quest);
+
+        if(data.quests[quest]){
+            button.classList.add("completed");
+            button.disabled = true;
+        }
+    });
+}
+
+function completeQuest(quest){
+
+    if(data.quests[quest]){
+        return;
+    }
+
+    // 出勤系クエストはどちらか一つだけ
+    if(quest === "work" && data.quests.late){
+        showMessage("⚔️ 出勤クエストはもう達成済み！");
+        return;
+    }
+
+    if(quest === "late" && data.quests.work){
+        showMessage("⚔️ 出勤クエストはもう達成済み！");
+        return;
+    }
+
+    data.quests[quest] = true;
+
+    const gainedExp = QUEST_EXP[quest];
+
+    data.exp += gainedExp;
+    data.gold += 5;
+
+    // 出勤した・遅刻したけど出勤
+    if(quest === "work" || quest === "late"){
+
+        if(data.lastAttendance !== today){
+
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            const yesterdayString =
+                yesterday.toISOString().slice(0,10);
+
+            if(data.lastAttendance === yesterdayString){
+                data.streak++;
+            }else{
+                data.streak = 1;
+            }
+
+            data.lastAttendance = today;
+        }
+    }
+
+    // レベルアップ
+    if(data.exp >= 100){
+
+        data.exp -= 100;
+        data.level++;
+
+        showMessage(
+            "✨ レベルアップ！！ Lv." + data.level + "になった！！"
+        );
+
+    }else{
+
+        showMessage(
+            "✨ クエスト達成！ +" + gainedExp + " EXP"
+        );
+    }
+
+    save();
+    updateScreen();
+}
+
+function showMessage(text){
+    document.getElementById("message").textContent = text;
+}
+
+updateScreen();
+
+</script>
 
 </body>
 </html>
