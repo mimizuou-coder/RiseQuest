@@ -58,26 +58,29 @@ button.completed{
     font-size:18px;
     font-weight:bold;
 }
-
 </style>
+
 </head>
 
 <body>
 
 <header>
+
 <h1>⚔️ Rise Quest</h1>
+
 <p>みちゃの冒険</p>
+
 </header>
 
 <div class="card">
 
 <h2>Lv.<span id="level">1</span></h2>
 
-<p class="status" id="hp">❤️❤️❤️❤️❤️</p>
+<p class="status">❤️❤️❤️❤️❤️</p>
 
-<p>EXP <span id="exp">0</span> / 100</p>
+<p>⭐ EXP <span id="exp">0</span> / 100</p>
 
-<p>🪙 Gold <span id="gold">0</span></p>
+<p>💎 ご褒美ポイント <span id="points">0</span>P</p>
 
 <p>🔥 連続出勤 <span id="streak">0</span>日</p>
 
@@ -85,22 +88,22 @@ button.completed{
 
 <div class="card">
 
-<h2>今日のクエスト</h2>
+<h2>🎯 今日のクエスト</h2>
 
 <button id="wake" onclick="completeQuest('wake')">
-🌞 起きた　＋10 EXP
+🌞 遅刻しない時間に起床　＋10 EXP / ＋10P
 </button>
 
 <button id="work" onclick="completeQuest('work')">
-💼 出勤した　＋30 EXP
+💼 出勤　＋40 EXP / ＋40P
 </button>
 
 <button id="late" onclick="completeQuest('late')">
-⏰ 遅刻したけど出勤　＋20 EXP
+⏰ 遅刻したけど出勤　＋25 EXP / ＋25P
 </button>
 
 <button id="phone" onclick="completeQuest('phone')">
-📵 スマホ我慢　＋15 EXP
+📵 スマホ我慢　＋15 EXP / ＋15P
 </button>
 
 <p class="message" id="message"></p>
@@ -117,121 +120,229 @@ button.completed{
 
 <script>
 
-const QUEST_EXP = {
-    wake: 10,
-    work: 30,
-    late: 20,
-    phone: 15
+const QUEST_REWARDS = {
+
+    wake: {
+        exp: 10,
+        points: 10
+    },
+
+    work: {
+        exp: 40,
+        points: 40
+    },
+
+    late: {
+        exp: 25,
+        points: 25
+    },
+
+    phone: {
+        exp: 15,
+        points: 15
+    }
+
 };
 
 let data = JSON.parse(localStorage.getItem("riseQuestData")) || {
+
     level: 1,
+
     exp: 0,
-    gold: 0,
+
+    points: 0,
+
     streak: 0,
+
     lastAttendance: null,
+
     quests: {},
+
     questDate: ""
+
 };
 
 const today = new Date().toISOString().slice(0,10);
 
 if(data.questDate !== today){
+
     data.quests = {};
+
     data.questDate = today;
+
     save();
+
 }
 
 function save(){
-    localStorage.setItem("riseQuestData", JSON.stringify(data));
+
+    localStorage.setItem(
+        "riseQuestData",
+        JSON.stringify(data)
+    );
+
 }
 
 function updateScreen(){
 
-    document.getElementById("level").textContent = data.level;
-    document.getElementById("exp").textContent = data.exp;
-    document.getElementById("gold").textContent = data.gold;
-    document.getElementById("streak").textContent = data.streak;
+    document.getElementById("level").textContent =
+        data.level;
 
-    Object.keys(QUEST_EXP).forEach(function(quest){
+    document.getElementById("exp").textContent =
+        data.exp;
 
-        const button = document.getElementById(quest);
+    document.getElementById("points").textContent =
+        data.points;
+
+    document.getElementById("streak").textContent =
+        data.streak;
+
+    Object.keys(QUEST_REWARDS).forEach(function(quest){
+
+        const button =
+            document.getElementById(quest);
 
         if(data.quests[quest]){
+
             button.classList.add("completed");
+
             button.disabled = true;
+
         }
+
     });
+
 }
 
 function completeQuest(quest){
 
     if(data.quests[quest]){
+
         return;
+
     }
 
-    // 出勤系クエストはどちらか一つだけ
-    if(quest === "work" && data.quests.late){
-        showMessage("⚔️ 出勤クエストはもう達成済み！");
+    /*
+    出勤クエストは
+    「出勤」と「遅刻したけど出勤」
+    のどちらか一方だけ
+    */
+
+    if(
+        quest === "work" &&
+        data.quests.late
+    ){
+
+        showMessage(
+            "⚔️ 出勤クエストはもう達成済み！"
+        );
+
         return;
+
     }
 
-    if(quest === "late" && data.quests.work){
-        showMessage("⚔️ 出勤クエストはもう達成済み！");
+    if(
+        quest === "late" &&
+        data.quests.work
+    ){
+
+        showMessage(
+            "⚔️ 出勤クエストはもう達成済み！"
+        );
+
         return;
+
     }
 
     data.quests[quest] = true;
 
-    const gainedExp = QUEST_EXP[quest];
+    const reward =
+        QUEST_REWARDS[quest];
 
-    data.exp += gainedExp;
-    data.gold += 5;
+    data.exp += reward.exp;
 
-    // 出勤した・遅刻したけど出勤
-    if(quest === "work" || quest === "late"){
+    data.points += reward.points;
+
+    /*
+    出勤した場合
+    連続勤務を更新
+    */
+
+    if(
+        quest === "work" ||
+        quest === "late"
+    ){
 
         if(data.lastAttendance !== today){
 
             const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
+
+            yesterday.setDate(
+                yesterday.getDate() - 1
+            );
 
             const yesterdayString =
                 yesterday.toISOString().slice(0,10);
 
-            if(data.lastAttendance === yesterdayString){
+            if(
+                data.lastAttendance ===
+                yesterdayString
+            ){
+
                 data.streak++;
+
             }else{
+
                 data.streak = 1;
+
             }
 
             data.lastAttendance = today;
+
         }
+
     }
 
-    // レベルアップ
+    /*
+    レベルアップ
+    */
+
     if(data.exp >= 100){
 
         data.exp -= 100;
+
         data.level++;
 
         showMessage(
-            "✨ レベルアップ！！ Lv." + data.level + "になった！！"
+            "✨ レベルアップ！！ Lv." +
+            data.level +
+            "になった！！"
         );
 
     }else{
 
         showMessage(
-            "✨ クエスト達成！ +" + gainedExp + " EXP"
+            "✨ クエスト達成！ +" +
+            reward.exp +
+            " EXP / +" +
+            reward.points +
+            "P"
         );
+
     }
 
     save();
+
     updateScreen();
+
 }
 
 function showMessage(text){
-    document.getElementById("message").textContent = text;
+
+    document.getElementById(
+        "message"
+    ).textContent = text;
+
 }
 
 updateScreen();
