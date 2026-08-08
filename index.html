@@ -129,6 +129,15 @@ function save(){
         JSON.stringify(data)
     );
 }
+/* レベルアップ処理 */
+function checkLevelUp(){
+    if(data.exp >= 100){
+        data.exp -= 100;
+        data.level++;
+        return true;
+    }
+    return false;
+}
 function updateScreen(){
     document.getElementById("level").textContent =
         data.level;
@@ -179,6 +188,9 @@ function completeQuest(quest){
         QUEST_REWARDS[quest];
     data.exp += reward.exp;
     data.points += reward.points;
+    let bonusExp = 0;
+    let bonusPoints = 0;
+    let bonusMessage = "";
     /*
     出勤した場合
     連続勤務を更新
@@ -199,6 +211,16 @@ function completeQuest(quest){
                 yesterdayString
             ){
                 data.streak++;
+                /*
+                2日目以降の連続出勤ボーナス
+                +10 EXP / +10P
+                */
+                bonusExp = 10;
+                bonusPoints = 10;
+                data.exp += bonusExp;
+                data.points += bonusPoints;
+                bonusMessage =
+                    " 🔥 連続出勤ボーナス +10 EXP / +10P！";
             }else{
                 data.streak = 1;
             }
@@ -208,13 +230,13 @@ function completeQuest(quest){
     /*
     レベルアップ
     */
-    if(data.exp >= 100){
-        data.exp -= 100;
-        data.level++;
+    const leveledUp = checkLevelUp();
+    if(leveledUp){
         showMessage(
             "✨ レベルアップ！！ Lv." +
             data.level +
-            "になった！！"
+            "になった！！" +
+            bonusMessage
         );
     }else{
         showMessage(
@@ -222,7 +244,8 @@ function completeQuest(quest){
             reward.exp +
             " EXP / +" +
             reward.points +
-            "P"
+            "P" +
+            bonusMessage
         );
     }
     save();
